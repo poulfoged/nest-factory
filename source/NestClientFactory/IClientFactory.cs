@@ -50,5 +50,7 @@ namespace NestClientFactory
         /// </summary>
         /// <returns>Factory for chaining</returns>
         IClientFactory EnableInfoLogging();
+
+        IDisposable AutomaticCleanup();
     }
 }

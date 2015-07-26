@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using Nest;
 using NestClientFactory.Lifestyle;
@@ -10,11 +11,13 @@ namespace NestClientFactory
 {
     public class ClientFactory : IClientFactory
     {
-        private Func<IElasticClient> _clientConstructor = () => new ElasticClient();
+        //private Func<IElasticClient> _clientConstructor = () => new ElasticClient();
         private ILifestyle _lifeStyle = new StaticLifestyle();
         private readonly IDictionary<string, Initializer> _initializers = new Dictionary<string, Initializer>(StringComparer.InvariantCultureIgnoreCase);
         private Action<string, object[]> _logger = (format, args) => Trace.WriteLine(string.Format(format, args));
         private bool _infoLoggingEnabled;
+        //private IElasticClient elasticClient;
+        private Lazy<IElasticClient> elasticClient = new Lazy<IElasticClient>(() => new ElasticClient()); 
 
         private void Info(string format, params object[] args)
         {
@@ -22,7 +25,7 @@ namespace NestClientFactory
                 _logger(format, args);
         }
 
-        public IDisposable Temporary()
+        public IClientFactory Temporary()
         {
             return null;
         }
@@ -30,13 +33,11 @@ namespace NestClientFactory
         public async Task<IElasticClient> CreateClient()
         {
             Info("Running {0} init-steps, statuses are stored in {1}", _initializers.Count, _lifeStyle.GetType().Name);
-
-            var client = _clientConstructor.Invoke();
-
-            foreach (var initializer in _initializers)
-                await RunInitializer(initializer, client);
             
-            return client;
+            foreach (var initializer in _initializers)
+                await RunInitializer(initializer, elasticClient.Value);
+
+            return elasticClient.Value;
         }
 
         private async Task RunInitializer(KeyValuePair<string, Initializer> initializer, IElasticClient client)
@@ -54,10 +55,11 @@ namespace NestClientFactory
 
             try
             {
-                bool result;
+                bool result = false;
                 try
                 {
-                    result = await initializer.Value.ProbeFunc(client);
+                    if (initializer.Value.ProbeFunc != null)
+                        result = await initializer.Value.ProbeFunc(client);
                 }
                 catch (Exception ex)
                 {
@@ -70,7 +72,8 @@ namespace NestClientFactory
                 {
                     Info("Initializing for {0}", initializer.Key);
 
-                    await initializer.Value.ActionFunc(client);
+                    if (initializer.Value.ActionFunc != null)
+                        await initializer.Value.ActionFunc(client);
                 }
 
                 Info("External status for {0} was ok - storing internally", initializer.Key);
@@ -98,6 +101,33 @@ namespace NestClientFactory
             return this;
         }
 
+        private class Cleaner : IDisposable
+        {
+            private readonly IElasticClient _client;
+            private readonly IDictionary<string, Initializer> _initializers;
+
+            public Cleaner(IElasticClient client, IDictionary<string, Initializer> initializers)
+            {
+                _client = client;
+                _initializers = initializers;
+            }
+
+
+            public void Dispose()
+            {
+                //Info("Running {0} init-steps, statuses are stored in {1}", _initializers.Count, _lifeStyle.GetType().Name);
+
+                
+                foreach (var initializer in _initializers.Where(c => c.Value.CleanupFunc != null))
+                    RunCleaner(initializer, _client);
+            }
+
+            private void RunCleaner(KeyValuePair<string, Initializer> initializer, IElasticClient client)
+            {
+                initializer.Value.CleanupFunc.Invoke(client).GetAwaiter().GetResult();
+            }
+        }
+
         private class Initializer : IInitializer
         {
             private readonly string _name;
@@ -110,6 +140,9 @@ namespace NestClientFactory
             public Func<IElasticClient, Task<bool>> ProbeFunc { get; private set; }
 
             public Func<IElasticClient, Task> ActionFunc { get; private set; }
+
+            public Func<IElasticClient, Task> CleanupFunc { get; private set; }
+
 
             public IInitializer Probe(Func<IElasticClient, Task<bool>> probeFunc)
             {
@@ -170,6 +203,21 @@ namespace NestClientFactory
 
                 return this;
             }
+
+            public IInitializer Cleanup(Func<IElasticClient, Task<IIndicesResponse>> cleanupFunc)
+            {
+                CleanupFunc = async client =>
+                {
+                    var result = await cleanupFunc(client);
+
+                    if (!result.IsValid)
+                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
+
+                };
+
+                return this;
+            }
+
         }
 
         public IClientFactory LogTo(Action<string, object[]> logger)
@@ -180,7 +228,7 @@ namespace NestClientFactory
 
         public IClientFactory ConstructUsing(Func<IElasticClient> func)
         {
-            _clientConstructor = func;
+            elasticClient = new Lazy<IElasticClient>(func);
             return this;
         }
 
@@ -188,6 +236,11 @@ namespace NestClientFactory
         {
             _infoLoggingEnabled = true;
             return this;
+        }
+
+        public IDisposable AutomaticCleanup()
+        {
+            return new Cleaner(elasticClient.Value, _initializers);
         }
     }
 }
