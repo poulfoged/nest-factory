@@ -8,7 +8,7 @@ Simply add the Nuget package:
 
 ## Requirements
 
-You'll need .NET Framework 4.5.2 and NEST 1.7 or later to use the precompiled binaries.
+You'll need .NET Framework 4.5.1 and NEST 1.7 or later to use the precompiled binaries.
 
 ## License
 

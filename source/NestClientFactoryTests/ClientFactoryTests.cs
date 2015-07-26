@@ -141,21 +141,23 @@ namespace NestClientFactoryTests
         [Test]
         public async Task Full_interface()
         {
-            var client = await new ClientFactory()
+            var elasticClient = await new ClientFactory()
                 .ConstructUsing(() => new ElasticClient())
                 .EnableInfoLogging()
                 .LogTo( (format, args) => Trace.WriteLine(string.Format(format, args)))
                 .InitializationLifeStyle(new StaticLifestyle())
                 .Initialize("my-index", i => i
-                    .Probe(async elasticClient => await elasticClient.IndexExistsAsync(a => a.Index("test_index")))
-                    .Action(async elasticClient => await elasticClient.CreateIndexAsync(a => a.Index("test_index"))))
+                    .Probe(async client => await client.IndexExistsAsync(a => a.Index("test_index")))
+                    .Action(async client => await client.CreateIndexAsync(a => a.Index("test_index"))))
                 .Initialize("my-mapping", i => i
-                    .Probe(async elasticClient => await elasticClient.GetMappingAsync<dynamic>(m => m.Index("test_index").Type("my-type")))
-                    .Action(async elasticClient => await elasticClient.MapAsync<dynamic>(m => m.Index("test_index").Type("my-type").Properties(p => p.String(s => s.Name("hello"))))))
+                    .Probe(async client => await client.GetMappingAsync<dynamic>(m => m.Index("test_index").Type("my-type")))
+                    .Action(async client => await client.MapAsync<dynamic>(m => m.Index("test_index").Type("my-type").Properties(p => p.String(s => s.Name("hello"))))))
                 .Initialize("my-alias", i => i
-                    .Probe(async elasticClient => await elasticClient.AliasExistsAsync(a => a.Name("test_read")))
-                    .Action(async elasticClient => await elasticClient.AliasAsync(a => a.Add(b => b.Alias("test_read").Index("test_index")))))
+                    .Probe(async client => await client.AliasExistsAsync(a => a.Name("test_read")))
+                    .Action(async client => await client.AliasAsync(a => a.Add(b => b.Alias("test_read").Index("test_index")))))
                 .CreateClient();
         }
     }
 }
+
+
