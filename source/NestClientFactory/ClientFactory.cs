@@ -22,6 +22,11 @@ namespace NestClientFactory
                 _logger(format, args);
         }
 
+        public IDisposable Temporary()
+        {
+            return null;
+        }
+
         public async Task<IElasticClient> CreateClient()
         {
             Info("Running {0} init-steps, statuses are stored in {1}", _initializers.Count, _lifeStyle.GetType().Name);
