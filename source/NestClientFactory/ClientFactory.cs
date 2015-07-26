@@ -12,7 +12,7 @@ namespace NestClientFactory
     {
         private Func<IElasticClient> _clientConstructor = () => new ElasticClient();
         private ILifestyle _lifeStyle = new StaticLifestyle();
-        private readonly ConcurrentDictionary<string, Initializer> _initializers = new ConcurrentDictionary<string, Initializer>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly IDictionary<string, Initializer> _initializers = new Dictionary<string, Initializer>(StringComparer.InvariantCultureIgnoreCase);
         private Action<string, object[]> _logger = (format, args) => Trace.WriteLine(string.Format(format, args));
         private bool _infoLoggingEnabled;
 
@@ -24,7 +24,7 @@ namespace NestClientFactory
 
         public async Task<IElasticClient> CreateClient()
         {
-            Info("Running {0} init-steps, statuses are stored in {1}", _initializers.Count, _lifeStyle.GetType());
+            Info("Running {0} init-steps, statuses are stored in {1}", _initializers.Count, _lifeStyle.GetType().Name);
 
             var client = _clientConstructor.Invoke();
 
@@ -36,6 +36,8 @@ namespace NestClientFactory
 
         private async Task RunInitializer(KeyValuePair<string, Initializer> initializer, IElasticClient client)
         {
+            Info("** Initializing {0} **", initializer.Key);
+
             if (!_lifeStyle.TryAdd(initializer.Key, new TaskCompletionSource<object>()))
             {
                 Info("Internal status ok for {0} - waiting", initializer.Key);
@@ -79,7 +81,9 @@ namespace NestClientFactory
 
         public IClientFactory Initialize(string name, Func<IInitializer, IInitializer> func)
         {
-            _initializers.TryAdd(name, func.Invoke(new Initializer()) as Initializer);
+            Info("Adding {0}", name);
+
+            _initializers.Add(name, func.Invoke(new Initializer(name)) as Initializer);
             return this;
         }
 
@@ -91,6 +95,13 @@ namespace NestClientFactory
 
         private class Initializer : IInitializer
         {
+            private readonly string _name;
+
+            public Initializer(string name)
+            {
+                _name = name;
+            }
+
             public Func<IElasticClient, Task<bool>> ProbeFunc { get; private set; }
 
             public Func<IElasticClient, Task> ActionFunc { get; private set; }
@@ -120,7 +131,7 @@ namespace NestClientFactory
                     var result = await actionFunc(client);
 
                     if (!result)
-                        throw new UnableToExecuteActionException("Action-function failed. Result was false");
+                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. Result was false", _name));
 
                 };
 
@@ -134,7 +145,7 @@ namespace NestClientFactory
                     var result = await actionFunc(client);
 
                     if (!result.IsValid)
-                        throw new UnableToExecuteActionException("Action-function failed." + (result.ServerError != null ? result.ServerError.Error : null));
+                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
 
                 };
 
@@ -148,7 +159,7 @@ namespace NestClientFactory
                     var result =  await actionFunc(client);
 
                     if (!result.IsValid)
-                        throw new UnableToExecuteActionException("Action-function failed." + (result.ServerError != null ? result.ServerError.Error : null));
+                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
                                        
                 };
 

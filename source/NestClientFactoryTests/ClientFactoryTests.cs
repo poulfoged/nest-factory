@@ -146,7 +146,7 @@ namespace NestClientFactoryTests
             var elasticClient = await new ClientFactory()
                 .ConstructUsing(() => new ElasticClient())
                 .EnableInfoLogging()
-                .LogTo( (format, args) => Trace.WriteLine(string.Format(format, args)))
+                .LogTo((format, args) => Trace.WriteLine(string.Format(format, args)))
                 .InitializationLifeStyle(new StaticLifestyle())
                 .Initialize("my-index", i => i
                     .Probe(async client => await client.IndexExistsAsync(a => a.Index("test_index")))

@@ -8,18 +8,18 @@ namespace NestClientFactory.Lifestyle
     /// </summary>
     public class TransientLifestyle : ILifestyle
     {
-        private readonly ConcurrentDictionary<string, object> InitializationStatus = new ConcurrentDictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<string, object> _initializationStatus = new ConcurrentDictionary<string, object>(StringComparer.InvariantCultureIgnoreCase);
 
         public T TryGet<T>(string key)
         {
             object arg;
-            InitializationStatus.TryGetValue(key, out arg);
+            _initializationStatus.TryGetValue(key, out arg);
             return (T)arg;
         }
 
         public bool TryAdd<T>(string key, T arg)
         {
-            return InitializationStatus.TryAdd(key, arg);
+            return _initializationStatus.TryAdd(key, arg);
         }
     }
 }
