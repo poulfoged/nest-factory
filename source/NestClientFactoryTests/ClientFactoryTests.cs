@@ -21,6 +21,7 @@ namespace NestClientFactoryTests
 
             ////Act
             await new ClientFactory()
+                .InitializationLifeStyle(new TransientLifestyle())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(false))
                     .Action(async elasticClient => await Task.Run(() => wasActionCalled = true)))
@@ -99,11 +100,12 @@ namespace NestClientFactoryTests
         {
             ////Arrange
             var count = 0;
-            
+            var lifestyle = new TransientLifestyle();
             ////Act
             var tasks = Enumerable.Range(0, 100).Select(r => Task.Factory.StartNew(async () =>
             {
                 await new ClientFactory()
+                .InitializationLifeStyle(lifestyle)
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.Run(delegate { count++; return false; }))
                     .Action(async elasticClient => await Task.FromResult(true)))

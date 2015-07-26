@@ -63,18 +63,7 @@ namespace NestClientFactory
                 {
                     Info("Initializing for {0}", initializer.Key);
 
-                    bool actionResult;
-                    try
-                    {
-                        actionResult = await initializer.Value.ActionFunc(client);
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new UnableToExecuteActionException("Action-function for " + initializer.Key + " failed to execute.",
-                            ex);
-                    }
-                    if (!actionResult)
-                        throw new UnableToExecuteActionException("Action-function for " + initializer.Key + " returned false");
+                    await initializer.Value.ActionFunc(client);
                 }
 
                 Info("External status for {0} was ok - storing internally", initializer.Key);
@@ -82,7 +71,8 @@ namespace NestClientFactory
             finally
             {
                 var source = _lifeStyle.TryGet<TaskCompletionSource<object>>(initializer.Key);
-                source.SetResult(null);
+                if (source != null)
+                    source.SetResult(null);
             }
 
         }
@@ -103,7 +93,7 @@ namespace NestClientFactory
         {
             public Func<IElasticClient, Task<bool>> ProbeFunc { get; private set; }
 
-            public Func<IElasticClient, Task<bool>> ActionFunc { get; private set; }
+            public Func<IElasticClient, Task> ActionFunc { get; private set; }
 
             public IInitializer Probe(Func<IElasticClient, Task<bool>> probeFunc)
             {
@@ -125,19 +115,43 @@ namespace NestClientFactory
 
             public IInitializer Action(Func<IElasticClient, Task<bool>> actionFunc)
             {
-                ActionFunc = actionFunc;
+                ActionFunc = async client =>
+                {
+                    var result = await actionFunc(client);
+
+                    if (!result)
+                        throw new UnableToExecuteActionException("Action-function failed. Result was false");
+
+                };
+
                 return this;
             }
 
             public IInitializer Action(Func<IElasticClient, Task<IIndicesOperationResponse>> actionFunc)
             {
-                ActionFunc = async client => (await actionFunc(client)).Acknowledged;
+                ActionFunc = async client =>
+                {
+                    var result = await actionFunc(client);
+
+                    if (!result.IsValid)
+                        throw new UnableToExecuteActionException("Action-function failed." + (result.ServerError != null ? result.ServerError.Error : null));
+
+                };
+
                 return this;
             }
 
             public IInitializer Action(Func<IElasticClient, Task<IIndicesResponse>> actionFunc)
             {
-                ActionFunc = async client => (await actionFunc(client)).Acknowledged;
+                ActionFunc = async client =>
+                {
+                    var result =  await actionFunc(client);
+
+                    if (!result.IsValid)
+                        throw new UnableToExecuteActionException("Action-function failed." + (result.ServerError != null ? result.ServerError.Error : null));
+                                       
+                };
+
                 return this;
             }
         }
