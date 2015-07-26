@@ -140,7 +140,7 @@ namespace NestClientFactoryTests
             Assert.That(executionTimes.All(e => e.TotalSeconds > 1000));
         }
 
-        [Test]
+        [Test, Ignore("Requires server")]
         public async Task Full_interface()
         {
             var elasticClient = await new ClientFactory()
