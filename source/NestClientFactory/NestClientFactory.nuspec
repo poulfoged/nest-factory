@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>nest-factory</id>
-    <version>1.0.3</version>
+    <version>$version$</version>
     <title>NEST Client Factory</title>
     <authors>Monzoom (Poul Foged)</authors>
     <owners>Monzoom (Poul Foged)</owners>
