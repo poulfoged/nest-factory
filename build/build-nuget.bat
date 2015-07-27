@@ -1,5 +1,5 @@
 @echo off
 cd %1
-cd ..\build\
+cd ..
 del *.nupkg
-tools\nuget.exe pack ..\source\NestClientFactory\NestClientFactory.csproj
+build\tools\nuget.exe pack source\NestClientFactory\NestClientFactory.csproj
