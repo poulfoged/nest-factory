@@ -43,7 +43,17 @@ namespace NestClientFactory
         /// </summary>
         /// <param name="func">Function for constructing the ElasticClient</param>
         /// <returns>Factory for chaining</returns>
+        [Obsolete("Use ConstructUsing(func, url). Url is used for distinquising multiple servers in a single setup")]
         IClientFactory ConstructUsing(Func<IElasticClient> func);
+
+
+        /// <summary>
+        /// Allows custom functionality to be added when creating the actual elastic-client, url should be provided for distinquising multiple servers
+        /// </summary>
+        /// <param name="func">Function for constructing the ElasticClient</param>
+        /// <param name="url">Used url, used to provide lifestyle in case of multiple servers</param>
+        /// <returns>Factory for chaining</returns>
+        IClientFactory ConstructUsing(Func<IElasticClient> func, Uri url);
 
         /// <summary>
         /// Enables informational logging

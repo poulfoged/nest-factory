@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -15,6 +14,7 @@ namespace NestClientFactory
         private readonly IDictionary<string, Initializer> _initializers = new Dictionary<string, Initializer>(StringComparer.InvariantCultureIgnoreCase);
         private Action<string, object[]> _logger = (format, args) => Trace.WriteLine(string.Format(format, args));
         private bool _infoLoggingEnabled;
+        private Uri _url = new Uri("http://localhost:9200");
 
         private void Info(string format, params object[] args)
         {
@@ -36,13 +36,16 @@ namespace NestClientFactory
 
         private async Task RunInitializer(KeyValuePair<string, Initializer> initializer, IElasticClient client)
         {
-            Info("** Initializing {0} **", initializer.Key);
+            var localKey = string.Format("{0}%{1}", _url, initializer.Key);
 
-            if (!_lifeStyle.TryAdd(initializer.Key, new TaskCompletionSource<object>()))
+
+            Info("** Initializing {0} **", localKey);
+
+            if (!_lifeStyle.TryAdd(localKey, new TaskCompletionSource<object>()))
             {
-                Info("Internal status ok for {0} - waiting", initializer.Key);
+                Info("Internal status ok for {0} - waiting", localKey);
 
-                var source = _lifeStyle.TryGet<TaskCompletionSource<object>>(initializer.Key);
+                var source = _lifeStyle.TryGet<TaskCompletionSource<object>>(localKey);
                 await source.Task;
                 return;
             }
@@ -56,23 +59,23 @@ namespace NestClientFactory
                 }
                 catch (Exception ex)
                 {
-                    throw new UnableToProbeException("Probe-function for " + initializer.Key + " failed to execute.", ex);
+                    throw new UnableToProbeException("Probe-function for " + localKey + " failed to execute.", ex);
                 }
 
-                Info("Checking external status for {0} was {1}", initializer.Key, result);
+                Info("Checking external status for {0} was {1}", localKey, result);
 
                 if (!result)
                 {
-                    Info("Initializing for {0}", initializer.Key);
+                    Info("Initializing for {0}", localKey);
 
                     await initializer.Value.ActionFunc(client);
                 }
 
-                Info("External status for {0} was ok - storing internally", initializer.Key);
+                Info("External status for {0} was ok - storing internally", localKey);
             }
             finally
             {
-                var source = _lifeStyle.TryGet<TaskCompletionSource<object>>(initializer.Key);
+                var source = _lifeStyle.TryGet<TaskCompletionSource<object>>(localKey);
                 if (source != null)
                     source.SetResult(null);
             }
@@ -173,8 +176,16 @@ namespace NestClientFactory
             return this;
         }
 
+        [Obsolete("Use ConstructUsing(func, url). Url is used for distinquising multiple servers in a single setup")]
         public IClientFactory ConstructUsing(Func<IElasticClient> func)
         {
+            _clientConstructor = func;
+            return this;
+        }
+
+        public IClientFactory ConstructUsing(Func<IElasticClient> func, Uri url)
+        {
+            this._url = url;
             _clientConstructor = func;
             return this;
         }

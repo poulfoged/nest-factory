@@ -32,6 +32,30 @@ namespace NestClientFactoryTests
         }
 
         [Test]
+        public async Task Two_clients_are_both_initialized()
+        {
+            ////Arrange
+            var wasActionCalled = false;
+            await new ClientFactory()
+                .ConstructUsing(() => new ElasticClient(), new Uri("http://server-1"))
+                .Initialize("my-index", i => i
+                    .Probe(async elasticClient => await Task.FromResult(false))
+                    .Action(async elasticClient => await Task.Run(() => true)))
+                .CreateClient();
+
+            ////Act
+            await new ClientFactory()
+                .ConstructUsing(() => new ElasticClient(), new Uri("http://server-2"))
+                .Initialize("my-index", i => i
+                    .Probe(async elasticClient => await Task.FromResult(false))
+                    .Action(async elasticClient => await Task.Run(() => wasActionCalled = true)))
+                .CreateClient();
+
+            ////Assert
+            Assert.That(wasActionCalled);
+        }
+
+        [Test]
         public async Task When_probe_returns_true_action_is_not_executed()
         {
             ////Arrange
@@ -130,7 +154,7 @@ namespace NestClientFactoryTests
             {
                 await new ClientFactory()
                     .Initialize("my-index", i => i
-                        .Probe(async elasticClient => await Task.Run(async delegate { await Task.Delay(1200); executionTimes.Add(DateTime.UtcNow-started); return false; }))
+                        .Probe(async elasticClient => await Task.Run(async delegate { await Task.Delay(1200); executionTimes.Add(DateTime.UtcNow - started); return false; }))
                         .Action(async elasticClient => await Task.FromResult(true)))
                     .CreateClient();
             }, TaskCreationOptions.LongRunning)).ToList();
