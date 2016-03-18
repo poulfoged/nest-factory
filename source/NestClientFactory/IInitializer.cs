@@ -42,7 +42,7 @@ namespace NestClientFactory
         /// </summary>
         /// <param name="actionFunc">Function to execute</param>
         /// <returns>Initialize for chaining</returns>
-        IInitializer Action(Func<IElasticClient, Task<IIndicesOperationResponse>> actionFunc);
+        IInitializer Action(Func<IElasticClient, Task<ICreateIndexResponse>> actionFunc);
 
         /// <summary>
         /// A method for executing an action against ElasticSearch, should return a IIndicesResponse indicating status
@@ -50,5 +50,12 @@ namespace NestClientFactory
         /// <param name="actionFunc">Function to execute</param>
         /// <returns>Initialize for chaining</returns>
         IInitializer Action(Func<IElasticClient, Task<IIndicesResponse>> actionFunc);
+
+        /// <summary>
+        /// A method for executing an action against ElasticSearch, should return a IBulkAliasResponse indicating status
+        /// </summary>
+        /// <param name="actionFunc">Function to execute</param>
+        /// <returns>Initialize for chaining</returns>
+        IInitializer Action(Func<IElasticClient, Task<IBulkAliasResponse>> actionFunc);
     }
 }

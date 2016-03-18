@@ -141,7 +141,7 @@ namespace NestClientFactory
                 return this;
             }
 
-            public IInitializer Action(Func<IElasticClient, Task<IIndicesOperationResponse>> actionFunc)
+            public IInitializer Action(Func<IElasticClient, Task<ICreateIndexResponse>> actionFunc)
             {
                 ActionFunc = async client =>
                 {
@@ -164,6 +164,21 @@ namespace NestClientFactory
                     if (!result.IsValid)
                         throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
                                        
+                };
+
+                return this;
+            }
+
+
+            public IInitializer Action(Func<IElasticClient, Task<IBulkAliasResponse>> actionFunc)
+            {
+                ActionFunc = async client =>
+                {
+                    var result = await actionFunc(client);
+
+                    if (!result.IsValid)
+                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
+
                 };
 
                 return this;

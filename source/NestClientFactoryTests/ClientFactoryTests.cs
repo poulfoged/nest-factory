@@ -173,8 +173,8 @@ namespace NestClientFactoryTests
                 .LogTo((format, args) => Trace.WriteLine(string.Format(format, args)))
                 .InitializationLifeStyle(new StaticLifestyle())
                 .Initialize("my-index", i => i
-                    .Probe(async client => await client.IndexExistsAsync(a => a.Index("test_index")))
-                    .Action(async client => await client.CreateIndexAsync(a => a.Index("test_index"))))
+                    .Probe(async client => await client.IndexExistsAsync(Indices.Index("test_index")))
+                    .Action(async client => await client.CreateIndexAsync("test_index")))
                 .Initialize("my-mapping", i => i
                     .Probe(async client => await client.GetMappingAsync<dynamic>(m => m.Index("test_index").Type("my-type")))
                     .Action(async client => await client.MapAsync<dynamic>(m => m.Index("test_index").Type("my-type").Properties(p => p.String(s => s.Name("hello"))))))
