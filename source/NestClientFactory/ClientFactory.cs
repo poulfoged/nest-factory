@@ -134,7 +134,7 @@ namespace NestClientFactory
                     var result = await actionFunc(client);
 
                     if (!result)
-                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. Result was false", _name));
+                        throw new UnableToExecuteActionException($"Action-function for {_name} failed. Result was false");
 
                 };
 
@@ -148,7 +148,7 @@ namespace NestClientFactory
                     var result = await actionFunc(client);
 
                     if (!result.IsValid)
-                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
+                        throw new UnableToExecuteActionException($"Action-function for {_name} failed.", result.OriginalException);
 
                 };
 
@@ -162,7 +162,7 @@ namespace NestClientFactory
                     var result =  await actionFunc(client);
 
                     if (!result.IsValid)
-                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
+                        throw new UnableToExecuteActionException($"Action-function for {_name} failed. {result.ServerError?.Error}", result.OriginalException);
                                        
                 };
 
@@ -177,7 +177,7 @@ namespace NestClientFactory
                     var result = await actionFunc(client);
 
                     if (!result.IsValid)
-                        throw new UnableToExecuteActionException(string.Format("Action-function for {0} failed. {1}", _name, result.ServerError != null ? result.ServerError.Error : null));
+                        throw new UnableToExecuteActionException($"Action-function for {_name} failed. {result.ServerError?.Error}", result.OriginalException);
 
                 };
 
