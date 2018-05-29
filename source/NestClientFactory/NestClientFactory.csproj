@@ -57,6 +57,7 @@
     <Compile Include="ClientFactory.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="IClientFactory.cs" />
+    <Compile Include="IClientConfigurator.cs" />
     <Compile Include="IInitializer.cs" />
     <Compile Include="Lifestyle\ILifestyle.cs" />
     <Compile Include="Lifestyle\StaticLifestyle.cs" />

@@ -38,6 +38,14 @@ namespace NestClientFactory
         /// <returns>Factory for chaining</returns>
         IClientFactory LogTo(Action<string, object[]> logger);
 
+
+        /// <summary>
+        /// Checks assemblies for <see cref="IClientConfigurator"/> instances to apply to configuration
+        /// </summary>
+        /// <param name="assemblyNames"></param>
+        /// <returns></returns>
+        IClientFactory Discover(params string[] assemblyNames);
+
         /// <summary>
         /// Allows custom functionality to be added when creating the actual elastic-client
         /// </summary>

@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Nest;
 using NestClientFactory.Lifestyle;
@@ -34,9 +37,44 @@ namespace NestClientFactory
             return client;
         }
 
+        public IClientFactory Discover(params string[] assemblyNames)
+        {
+            if (!_lifeStyle.TryAdd("_discovery", new ManualResetEvent(false)))
+            {
+                var source = _lifeStyle.TryGet<ManualResetEvent>("_discovery");
+                source.WaitOne();
+                
+                var configurators = _lifeStyle.TryGet<IClientConfigurator[]>("_configurators");
+                
+                foreach (var clientConfigurator in configurators)
+                    clientConfigurator.Configure(this);
+
+                return this;
+            }
+            
+            var types = assemblyNames.Select(Assembly.Load)
+                .SelectMany(s => s.GetTypes())
+                .Where(myType =>
+                    myType.IsClass &&
+                    !myType.IsAbstract &&
+                    !myType.IsInterface &&
+                    typeof(IClientConfigurator).IsAssignableFrom(myType));
+
+            var clientConfigurators = types.Select(type => (IClientConfigurator) Activator.CreateInstance(type)).ToArray();
+
+            _lifeStyle.TryAdd("_configurators", clientConfigurators);
+
+            foreach (var clientConfigurator in clientConfigurators)
+                clientConfigurator.Configure(this);
+
+            _lifeStyle.TryGet<ManualResetEvent>("_discovery").Set();
+
+            return this;
+        }
+
         private async Task RunInitializer(KeyValuePair<string, Initializer> initializer, IElasticClient client)
         {
-            var localKey = string.Format("{0}%{1}", _url, initializer.Key);
+            var localKey = $"{_url}%{initializer.Key}";
 
 
             Info("** Initializing {0} **", localKey);

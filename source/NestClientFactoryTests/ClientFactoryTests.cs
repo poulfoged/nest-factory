@@ -164,6 +164,44 @@ namespace NestClientFactoryTests
             Assert.That(executionTimes.All(e => e.TotalSeconds > 1000));
         }
 
+        [Test]
+        public async Task Can_discover_assemblies()
+        {
+            ////Arrange
+            var before = ToBeDiscovered.ConstuctorCalls;
+
+            ////Act
+            await new ClientFactory()
+                .Discover("NestClientFactoryTests")
+                .CreateClient();
+
+            ////Assert
+            Assert.That(ToBeDiscovered.ConstuctorCalls, Is.EqualTo(before+1));
+        }
+
+        [Test]
+        public async Task Multiple_calls_will_only_cause_one_class_construct_but_configure_for_each_instance()
+        {
+            ////Arrange
+            var before = ToBeDiscovered.ConstuctorCalls;
+            var beforeActions = ToBeDiscovered.ConfgureCalls;
+
+            await new ClientFactory()
+                .Discover("NestClientFactoryTests")
+                .CreateClient();
+
+            Assert.That(ToBeDiscovered.ConfgureCalls, Is.EqualTo(beforeActions+1));
+                
+            ////Act
+            await new ClientFactory()
+                .Discover("NestClientFactoryTests")
+                .CreateClient();
+
+            ////Assert
+            Assert.That(ToBeDiscovered.ConstuctorCalls, Is.EqualTo(before + 1));
+            Assert.That(ToBeDiscovered.ConfgureCalls, Is.EqualTo(beforeActions + 2));
+        }
+
         [Test, Ignore("Requires server")]
         public async Task Full_interface()
         {
@@ -182,6 +220,27 @@ namespace NestClientFactoryTests
                     .Probe(async client => await client.AliasExistsAsync(a => a.Name("test_read")))
                     .Action(async client => await client.AliasAsync(a => a.Add(b => b.Alias("test_read").Index("test_index")))))
                 .CreateClient();
+        }
+    }
+
+    public class ToBeDiscovered : IClientConfigurator
+    {
+        public static int ConstuctorCalls { get; set; }
+        public static int ConfgureCalls { get; set; }
+
+        public ToBeDiscovered()
+        {
+            ConstuctorCalls++;
+        }
+
+        public void Configure(IClientFactory factory)
+        {
+            ConfgureCalls++;
+
+            factory
+                .Initialize("my-index", i => i
+                    .Probe(elasticClient => Task.FromResult(false))
+                    .Action(elasticClient => Task.FromResult(true)));
         }
     }
 }
