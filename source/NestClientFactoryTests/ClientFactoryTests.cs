@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 using Nest;
 using NestClientFactory;
 using NestClientFactory.Lifestyle;
-using NUnit.Framework;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace NestClientFactoryTests
 {
-    [TestFixture]
+    [TestClass]
     public class ClientFactoryTests
     {
-        [Test]
+        [TestMethod]
         public async Task When_probe_returns_false_action_is_executed()
         {
             ////Arrange
@@ -28,10 +28,10 @@ namespace NestClientFactoryTests
                 .CreateClient();
 
             ////Assert
-            Assert.That(wasActionCalled);
+            Assert.IsTrue(wasActionCalled);
         }
 
-        [Test]
+        [TestMethod]
         public async Task Two_clients_are_both_initialized()
         {
             ////Arrange
@@ -52,10 +52,10 @@ namespace NestClientFactoryTests
                 .CreateClient();
 
             ////Assert
-            Assert.That(wasActionCalled);
+            Assert.IsTrue(wasActionCalled);
         }
 
-        [Test]
+        [TestMethod]
         public async Task When_probe_returns_true_action_is_not_executed()
         {
             ////Arrange
@@ -69,10 +69,10 @@ namespace NestClientFactoryTests
                 .CreateClient();
 
             ////Assert
-            Assert.That(wasActionCalled, Is.False);
+            Assert.IsFalse(wasActionCalled);
         }
 
-        [Test]
+        [TestMethod]
         public async Task Trancient_lifestyle_calls_every_time()
         {
             ////Arrange
@@ -93,10 +93,10 @@ namespace NestClientFactoryTests
                 .CreateClient();
 
             ////Assert
-            Assert.That(wasActionCalled);
+            Assert.IsTrue(wasActionCalled);
         }
 
-        [Test]
+        [TestMethod]
         public async Task When_already_ensured_nothing_will_execute()
         {
             ////Arrange
@@ -116,10 +116,10 @@ namespace NestClientFactoryTests
                 .CreateClient();
 
             ////Assert
-            Assert.That(wasActionCalled, Is.False);
+            Assert.IsFalse(wasActionCalled);
         }
 
-        [Test]
+        [TestMethod]
         public async Task With_multiple_threads_statement_is_executed_once()
         {
             ////Arrange
@@ -138,10 +138,10 @@ namespace NestClientFactoryTests
             await Task.WhenAll(tasks);
 
             ////Assert
-            Assert.That(count, Is.EqualTo(1));
+            Assert.AreEqual(1, count);
         }
 
-        [Test]
+        [TestMethod]
         public async Task All_calls_will_wait_for_the_first_call()
         {
             ////Arrange
@@ -161,10 +161,9 @@ namespace NestClientFactoryTests
             await Task.WhenAll(tasks);
 
             ////Assert
-            Assert.That(executionTimes.All(e => e.TotalSeconds > 1000));
+            Assert.IsTrue(executionTimes.All(e => e.TotalSeconds > 1000));
         }
 
-        [Test, NUnit.Framework.Ignore("Requires server")]
         public async Task Full_interface()
         {
             var elasticClient = await new ClientFactory()

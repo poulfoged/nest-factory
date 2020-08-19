@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Nest;
 using NestClientFactory.Lifestyle;
@@ -15,6 +18,9 @@ namespace NestClientFactory
         private Action<string, object[]> _logger = (format, args) => Trace.WriteLine(string.Format(format, args));
         private bool _infoLoggingEnabled;
         private Uri _url = new Uri("http://localhost:9200");
+        private ConnectionSettings _settings;
+        private Func<ConnectionSettings, IElasticClient> _clientConstructorWithSettings;
+        private IConnectionSettingsConfigurator[] _connectionConfigurators;
 
         private void Info(string format, params object[] args)
         {
@@ -24,14 +30,49 @@ namespace NestClientFactory
 
         public async Task<IElasticClient> CreateClient()
         {
-            Info("Running {0} init-steps, statuses are stored in {1}", _initializers.Count, _lifeStyle.GetType().Name);
+            this.Info("Running {0} init-steps, statuses are stored in {1}", (object)this._initializers.Count, (object)this._lifeStyle.GetType().Name);
+            IElasticClient client;
+            if (this._clientConstructorWithSettings != null)
+            {
+                IConnectionSettingsConfigurator[] settingsConfiguratorArray = this._connectionConfigurators;
+                for (int index = 0; index < settingsConfiguratorArray.Length; ++index)
+                {
+                    IConnectionSettingsConfigurator connectionSettingsConfigurator = settingsConfiguratorArray[index];
+                    connectionSettingsConfigurator.Configure(_settings);
+                }
+                settingsConfiguratorArray = null;
+                client = _clientConstructorWithSettings(_settings);
+            }
+            else
+                client = _clientConstructor();
 
-            var client = _clientConstructor.Invoke();
-
-            foreach (var initializer in _initializers)
-                await RunInitializer(initializer, client);
-            
+            foreach (KeyValuePair<string, Initializer> initializer1 in _initializers)
+            {
+                KeyValuePair<string, ClientFactory.Initializer> initializer = initializer1;
+                await this.RunInitializer(initializer, client);
+                initializer = new KeyValuePair<string, ClientFactory.Initializer>();
+            }
             return client;
+        }
+
+        public IClientFactory Discover(params string[] assemblyNames)
+        {
+            if (!this._lifeStyle.TryAdd<ManualResetEvent>("_discovery", new ManualResetEvent(false)))
+            {
+                this._lifeStyle.TryGet<ManualResetEvent>("_discovery").WaitOne();
+                foreach (IClientConfigurator clientConfigurator in this._lifeStyle.TryGet<IClientConfigurator[]>("_configurators"))
+                    clientConfigurator.Configure((IClientFactory)this);
+                this._connectionConfigurators = this._lifeStyle.TryGet<IConnectionSettingsConfigurator[]>("_connectionConfigurators");
+                return (IClientFactory)this;
+            }
+            IClientConfigurator[] array = ((IEnumerable<string>)assemblyNames).Select<string, Assembly>(new Func<string, Assembly>(Assembly.Load)).SelectMany<Assembly, Type>((Func<Assembly, IEnumerable<Type>>)(s => (IEnumerable<Type>)s.GetTypes())).Where<Type>((Func<Type, bool>)(myType => myType.IsClass && !myType.IsAbstract && !myType.IsInterface && typeof(IClientConfigurator).IsAssignableFrom(myType))).Select<Type, IClientConfigurator>((Func<Type, IClientConfigurator>)(type => (IClientConfigurator)Activator.CreateInstance(type))).ToArray<IClientConfigurator>();
+            this._connectionConfigurators = ((IEnumerable<string>)assemblyNames).Select<string, Assembly>(new Func<string, Assembly>(Assembly.Load)).SelectMany<Assembly, Type>((Func<Assembly, IEnumerable<Type>>)(s => (IEnumerable<Type>)s.GetTypes())).Where<Type>((Func<Type, bool>)(myType => myType.IsClass && !myType.IsAbstract && !myType.IsInterface && typeof(IConnectionSettingsConfigurator).IsAssignableFrom(myType))).Select<Type, IConnectionSettingsConfigurator>((Func<Type, IConnectionSettingsConfigurator>)(type => (IConnectionSettingsConfigurator)Activator.CreateInstance(type))).ToArray<IConnectionSettingsConfigurator>();
+            this._lifeStyle.TryAdd<IConnectionSettingsConfigurator[]>("_connectionConfigurators", this._connectionConfigurators);
+            this._lifeStyle.TryAdd<IClientConfigurator[]>("_configurators", array);
+            foreach (IClientConfigurator clientConfigurator in array)
+                clientConfigurator.Configure((IClientFactory)this);
+            this._lifeStyle.TryGet<ManualResetEvent>("_discovery").Set();
+            return (IClientFactory)this;
         }
 
         private async Task RunInitializer(KeyValuePair<string, Initializer> initializer, IElasticClient client)
@@ -208,6 +249,16 @@ namespace NestClientFactory
             this._url = url;
             _clientConstructor = func;
             return this;
+        }
+
+        public IClientFactory ConstructUsing(
+   ConnectionSettings settings,
+   Func<ConnectionSettings, IElasticClient> func,
+   Uri url)
+        {
+            this._settings = settings;
+            this._clientConstructorWithSettings = func;
+            return (IClientFactory)this;
         }
 
         public IClientFactory EnableInfoLogging()

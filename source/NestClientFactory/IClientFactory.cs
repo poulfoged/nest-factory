@@ -39,6 +39,11 @@ namespace NestClientFactory
         IClientFactory LogTo(Action<string, object[]> logger);
 
         /// <summary>
+        /// 
+        /// </summary>
+        IClientFactory Discover(params string[] assemblyNames);
+
+        /// <summary>
         /// Allows custom functionality to be added when creating the actual elastic-client
         /// </summary>
         /// <param name="func">Function for constructing the ElasticClient</param>
@@ -54,6 +59,8 @@ namespace NestClientFactory
         /// <param name="url">Used url, used to provide lifestyle in case of multiple servers</param>
         /// <returns>Factory for chaining</returns>
         IClientFactory ConstructUsing(Func<IElasticClient> func, Uri url);
+
+        IClientFactory ConstructUsing(ConnectionSettings settings, Func<ConnectionSettings, IElasticClient> func, Uri url);
 
         /// <summary>
         /// Enables informational logging
