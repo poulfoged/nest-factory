@@ -164,7 +164,7 @@ namespace NestClientFactoryTests
             Assert.That(executionTimes.All(e => e.TotalSeconds > 1000));
         }
 
-        [Test, Ignore("Requires server")]
+        [Test, NUnit.Framework.Ignore("Requires server")]
         public async Task Full_interface()
         {
             var elasticClient = await new ClientFactory()
@@ -177,7 +177,7 @@ namespace NestClientFactoryTests
                     .Action(async client => await client.CreateIndexAsync("test_index")))
                 .Initialize("my-mapping", i => i
                     .Probe(async client => await client.GetMappingAsync<dynamic>(m => m.Index("test_index").Type("my-type")))
-                    .Action(async client => await client.MapAsync<dynamic>(m => m.Index("test_index").Type("my-type").Properties(p => p.String(s => s.Name("hello"))))))
+                    .Action(async client => await client.MapAsync<dynamic>(m => m.Index("test_index").Type("my-type").Properties(p => p.Text(s => s.Name("hello"))))))
                 .Initialize("my-alias", i => i
                     .Probe(async client => await client.AliasExistsAsync(a => a.Name("test_read")))
                     .Action(async client => await client.AliasAsync(a => a.Add(b => b.Alias("test_read").Index("test_index")))))

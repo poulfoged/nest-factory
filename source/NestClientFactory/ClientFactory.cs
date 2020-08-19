@@ -123,7 +123,12 @@ namespace NestClientFactory
 
             public IInitializer Probe(Func<IElasticClient, Task<IGetMappingResponse>> probeFunc)
             {
-                ProbeFunc = async client => (await probeFunc(client)).Mapping != null;
+                this.ProbeFunc = async client =>
+                {
+                    IGetMappingResponse getMappingResponse = await probeFunc(client);
+                    return getMappingResponse.Indices != null;
+                };
+
                 return this;
             }
 
