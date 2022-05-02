@@ -20,7 +20,7 @@ namespace NestClientFactoryTests
             var wasActionCalled = false;
 
             ////Act
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .InitializationLifeStyle(new TransientLifestyle())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(false))
@@ -36,7 +36,7 @@ namespace NestClientFactoryTests
         {
             ////Arrange
             var wasActionCalled = false;
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .ConstructUsing(() => new ElasticClient(), new Uri("http://server-1"))
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(false))
@@ -44,7 +44,7 @@ namespace NestClientFactoryTests
                 .CreateClient();
 
             ////Act
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .ConstructUsing(() => new ElasticClient(), new Uri("http://server-2"))
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(false))
@@ -62,7 +62,7 @@ namespace NestClientFactoryTests
             var wasActionCalled = false;
 
             ////Act
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(true))
                     .Action(async elasticClient => await Task.Run(() => wasActionCalled = true)))
@@ -78,14 +78,14 @@ namespace NestClientFactoryTests
             ////Arrange
             var wasActionCalled = false;
 
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(true))
                     .Action(async elasticClient => await Task.FromResult(true)))
                 .CreateClient();
 
             ////Act
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .InitializationLifeStyle(new TransientLifestyle())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.Run(() => wasActionCalled = true))
@@ -102,14 +102,14 @@ namespace NestClientFactoryTests
             ////Arrange
             var wasActionCalled = false;
 
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.FromResult(true))
                     .Action(async elasticClient => await Task.FromResult(true)))
                 .CreateClient();
 
             ////Act
-            await new ClientFactory()
+            await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.Run(() => wasActionCalled = true))
                     .Action(async elasticClient => await Task.FromResult(true)))
@@ -128,7 +128,7 @@ namespace NestClientFactoryTests
             ////Act
             var tasks = Enumerable.Range(0, 100).Select(r => Task.Factory.StartNew(async () =>
             {
-                await new ClientFactory()
+                await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .InitializationLifeStyle(lifestyle)
                 .Initialize("my-index", i => i
                     .Probe(async elasticClient => await Task.Run(delegate { count++; return false; }))
@@ -152,7 +152,7 @@ namespace NestClientFactoryTests
             ////Act
             var tasks = Enumerable.Range(0, 100).Select(r => Task.Factory.StartNew(async () =>
             {
-                await new ClientFactory()
+                await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                     .Initialize("my-index", i => i
                         .Probe(async elasticClient => await Task.Run(async delegate { await Task.Delay(1200); executionTimes.Add(DateTime.UtcNow - started); return false; }))
                         .Action(async elasticClient => await Task.FromResult(true)))
@@ -166,7 +166,7 @@ namespace NestClientFactoryTests
 
         public async Task Full_interface()
         {
-            var elasticClient = await new ClientFactory()
+            var elasticClient = await new ClientFactory(Enumerable.Empty<IClientConfigurator>(), Enumerable.Empty<IConnectionSettingsConfigurator>())
                 .ConstructUsing(() => new ElasticClient())
                 .EnableInfoLogging()
                 .LogTo((format, args) => Trace.WriteLine(string.Format(format, args)))
