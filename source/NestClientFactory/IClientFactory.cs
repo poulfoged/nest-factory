@@ -44,6 +44,11 @@ namespace NestClientFactory
         IClientFactory Discover(params string[] assemblyNames);
 
         /// <summary>
+        /// 
+        /// </summary>
+        IClientFactory Inject();
+
+        /// <summary>
         /// Allows custom functionality to be added when creating the actual elastic-client
         /// </summary>
         /// <param name="func">Function for constructing the ElasticClient</param>

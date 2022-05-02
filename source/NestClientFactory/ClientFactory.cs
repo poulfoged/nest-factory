@@ -21,6 +21,12 @@ namespace NestClientFactory
         private ConnectionSettings _settings;
         private Func<ConnectionSettings, IElasticClient> _clientConstructorWithSettings;
         private IConnectionSettingsConfigurator[] _connectionConfigurators;
+        private readonly IClientConfigurator[] _clientConfigurators;
+
+        public ClientFactory(IEnumerable<IClientConfigurator> clientConfigurators, IEnumerable<IConnectionSettingsConfigurator> connectionConfigurators) { 
+            _connectionConfigurators = connectionConfigurators.ToArray();
+            _clientConfigurators = clientConfigurators.ToArray();
+        }
 
         private void Info(string format, params object[] args)
         {
@@ -70,6 +76,24 @@ namespace NestClientFactory
             this._lifeStyle.TryAdd<IConnectionSettingsConfigurator[]>("_connectionConfigurators", this._connectionConfigurators);
             this._lifeStyle.TryAdd<IClientConfigurator[]>("_configurators", array);
             foreach (IClientConfigurator clientConfigurator in array)
+                clientConfigurator.Configure((IClientFactory)this);
+            this._lifeStyle.TryGet<ManualResetEvent>("_discovery").Set();
+            return (IClientFactory)this;
+        }
+
+        public IClientFactory Inject()
+        {
+            if (!this._lifeStyle.TryAdd<ManualResetEvent>("_discovery", new ManualResetEvent(false)))
+            {
+                this._lifeStyle.TryGet<ManualResetEvent>("_discovery").WaitOne();
+                foreach (IClientConfigurator clientConfigurator in this._lifeStyle.TryGet<IClientConfigurator[]>("_configurators"))
+                    clientConfigurator.Configure((IClientFactory)this);
+                this._connectionConfigurators = this._lifeStyle.TryGet<IConnectionSettingsConfigurator[]>("_connectionConfigurators");
+                return (IClientFactory)this;
+            }
+            this._lifeStyle.TryAdd<IConnectionSettingsConfigurator[]>("_connectionConfigurators", this._connectionConfigurators);
+            this._lifeStyle.TryAdd<IClientConfigurator[]>("_configurators", this._clientConfigurators);
+            foreach (IClientConfigurator clientConfigurator in _clientConfigurators)
                 clientConfigurator.Configure((IClientFactory)this);
             this._lifeStyle.TryGet<ManualResetEvent>("_discovery").Set();
             return (IClientFactory)this;
